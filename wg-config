@@ -94,7 +94,7 @@ cat << EOF > $a_file
 PrivateKey = $a_privkey
 Address = $a_tunnel_address
 DNS = $b_dns
-Port = $port
+ListenPort = $port
 
 [Peer]
 PublicKey = $b_pubkey
@@ -120,7 +120,7 @@ cat << EOF > $b_file
 PrivateKey = $b_privkey
 Address = $b_tunnel_address
 DNS = $a_dns
-Port = $port
+ListenPort = $port
 
 [Peer]
 PublicKey = $a_pubkey
