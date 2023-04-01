@@ -5,7 +5,7 @@ create a wireguard config for 2 endpoints with one command
 #ä Installation
 ~~~
 apt install wireguard qrencode
-wget -O /usr/local/bin/wg-config https://git.bashclub.org/thorsten.spille/wg-config/raw/branch/main/wg-config
+wget -O /usr/local/bin/wg-config https://git.bashclub.org/bashclub/wg-config/raw/branch/main/wg-config
 chmod +x /usr/local/bin/wg-config
 wg-config -h
 ~~~
