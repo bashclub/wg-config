@@ -109,7 +109,7 @@ if [ $a_print_qr -gt 0 ]; then
     qrencode -t ansiutf8 < $a_file
 elif [ $a_print_opn -gt 0 ]; then
     echo -e "Paste the following values into your OPNsense Wireguard config\n"
-    echo -e "[Local]\n  Public Key:\t\t$a_pubkey\n  Private Key:\t\t$a_privkey\n  Listen Port:\t\t$port\n  Tunnel Address:\t$a_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$b_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $b_tunnel_address | cut -d '/' -f1)/32,$b_networks\n  Endpoint Address:\t$b_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
+    echo -e "[Local]\n  Public Key:\t\t$a_pubkey\n  Private Key:\t\t$a_privkey\n  Listen Port:\t\t$port\n  DNS Server:\t\t$a_dns\n  Tunnel Address:\t$a_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$b_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $b_tunnel_address | cut -d '/' -f1)/32,$b_networks\n  Endpoint Address:\t$b_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
 else
     cat $a_file
     echo ""
@@ -135,7 +135,7 @@ if [ $b_print_qr -gt 0 ]; then
     qrencode -t ansiutf8 < $b_file
 elif [ $b_print_opn -gt 0 ]; then
     echo -e "Paste the following values into your OPNsense Wireguard config\n"
-    echo -e "[Local]\n  Public Key:\t\t$b_pubkey\n  Private Key:\t\t$b_privkey\n  Listen Port:\t\t$port\n  Tunnel Address:\t$b_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$a_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $a_tunnel_address | cut -d '/' -f1)/32,$a_networks\n  Endpoint Address:\t$a_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
+    echo -e "[Local]\n  Public Key:\t\t$b_pubkey\n  Private Key:\t\t$b_privkey\n  Listen Port:\t\t$port\n  DNS Server:\t\t$b_dns\n  Tunnel Address:\t$b_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$a_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $a_tunnel_address | cut -d '/' -f1)/32,$a_networks\n  Endpoint Address:\t$a_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
 else
     cat $b_file
     echo ""
