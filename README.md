@@ -1,3 +1,5 @@
+---- THIS IS A CLONE OF THE ORIGINAL REPOSITORY ON git.bashclub.org ----
+
 # wg-config
 
 create a wireguard config for 2 endpoints with one command
