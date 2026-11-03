@@ -1,13 +1,13 @@
----- THIS IS A CLONE OF THE ORIGINAL REPOSITORY ON git.bashclub.org ----
-
 # wg-config
+
+> Development takes place at https://code.bashclub.org/bashclub/wg-config
 
 create a wireguard config for 2 endpoints with one command
 
 ## Installation
 ~~~
 apt install wireguard qrencode
-wget -O /usr/local/bin/wg-config https://git.bashclub.org/bashclub/wg-config/raw/branch/main/wg-config
+wget -O /usr/local/bin/wg-config https://code.bashclub.org/bashclub/wg-config/raw/branch/main/wg-config
 chmod +x /usr/local/bin/wg-config
 wg-config -h
 ~~~
