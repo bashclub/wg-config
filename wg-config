@@ -4,56 +4,57 @@
 
 prog="$(basename $0)"
 
-a_privkey=$(wg genkey)
-a_pubkey=$(echo ${a_privkey} | wg pubkey)
-a_file=./side-a.conf
+# Generated files contain private keys
+umask 077
+
+a_name=side-a
+a_file=""
+a_keyfile=""
 a_print_qr=0
 a_print_opn=0
 
-b_privkey=$(wg genkey)
-b_pubkey=$(echo ${b_privkey} | wg pubkey)
-b_file=./side-b.conf
+b_name=side-b
+b_file=""
+b_keyfile=""
 b_print_qr=0
 b_print_opn=0
 
 port=51820
+b_port=""
 persistent_keepalive=25
-psk=$(wg genpsk)
 
 if ! which wg > /dev/null; then
     echo "Please install wireguard before running this script!"
     exit 1
 fi
 
-if ! which qrencode > /dev/null; then
-    echo "Please install qrencode before running this script!"
-    exit 1
-fi
-
-
-
 usage() {
 	cat >&2 <<-EOF
-	usage: $prog [-h] 
+	usage: $prog [-h]
 	  creates a wireguard configuration for both endpoints
 
-    -e ENDPOINT_ADDR     Endpoint address on side A
+    -a NAME              Name of side A (OPNsense instance/peer name, default: $a_name)
+    -e ENDPOINT_ADDR     Endpoint address on side A (omit for clients without fixed address)
     -t TUNNEL_ADDR       Tunnel address on side A
     -n NETWORKS          CIDR formatted networks accessible on side A (comma separated)
     -d DNS               DNS servers and suffixes accessible on side A (comma separated)
-    -f FILENAME          Save side A to specified file (default: $a_file)
+    -r KEY_OR_CONF       Reuse the private key of side A (key file or existing wg config)
+    -f FILENAME          Save side A to specified file (default: ./NAME.conf)
     -q                   Print side A as QR code
-    -o                   Print side A as OPNsense template
+    -o                   Print side A as OPNsense values
 
-    -E ENDPOINT          Endpoint address on side B
+    -A NAME              Name of side B (OPNsense instance/peer name, default: $b_name)
+    -E ENDPOINT          Endpoint address on side B (omit for clients without fixed address)
     -T TUNNEL_ADDR       Tunnel address on side B
     -N NETWORKS          CIDR formatted networks accessible on side B (comma separated)
     -D DNS               DNS servers and suffixes accessible on side B (comma separated)
-    -F FILENAME          Save side B to specified file (default: $b_file)
+    -R KEY_OR_CONF       Reuse the private key of side B (key file or existing wg config)
+    -F FILENAME          Save side B to specified file (default: ./NAME.conf)
     -Q                   Print side B as QR code
-    -O                   Print side B as OPNsense template
+    -O                   Print side B as OPNsense values
 
-    -p PORT              UDP Port (used on both sides, default: $port)
+    -p PORT              UDP port of side A (and of side B unless -P is set, default: $port)
+    -P PORT              UDP port of side B (e.g. the port a FRITZ!Box chose itself)
     -k KEEPALIVE         Override PersistentKeepalive (default: $persistent_keepalive)
 
     -h                   displays this help text
@@ -65,10 +66,11 @@ usage() {
 	exit $1
 }
 
-
-while getopts "e:t:n:d:f:qoE:T:N:D:F:QOp:k:h" opt; do
+while getopts "a:e:t:n:d:r:f:qoA:E:T:N:D:R:F:QOp:P:k:h" opt; do
   case $opt in
     h) usage 0 ;;
+    a) a_name=$OPTARG ;;
+    A) b_name=$OPTARG ;;
     e) a_endpoint_address=$OPTARG ;;
     E) b_endpoint_address=$OPTARG ;;
     t) a_tunnel_address=$OPTARG ;;
@@ -77,6 +79,8 @@ while getopts "e:t:n:d:f:qoE:T:N:D:F:QOp:k:h" opt; do
     N) b_networks=$OPTARG ;;
     d) a_dns=$OPTARG ;;
     D) b_dns=$OPTARG ;;
+    r) a_keyfile=$OPTARG ;;
+    R) b_keyfile=$OPTARG ;;
     f) a_file=$OPTARG ;;
     F) b_file=$OPTARG ;;
     q) a_print_qr=1 ;;
@@ -84,59 +88,135 @@ while getopts "e:t:n:d:f:qoE:T:N:D:F:QOp:k:h" opt; do
     o) a_print_opn=1 ;;
     O) b_print_opn=1 ;;
     p) port=$OPTARG ;;
+    P) b_port=$OPTARG ;;
     k) persistent_keepalive=$OPTARG ;;
+    *) usage 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
-cat << EOF > $a_file
-[Interface]
-PrivateKey = $a_privkey
-Address = $a_tunnel_address
-DNS = $b_dns
-ListenPort = $port
-
-[Peer]
-PublicKey = $b_pubkey
-PresharedKey = $psk
-AllowedIPs = $(echo $b_tunnel_address | cut -d '/' -f1)/32,$b_networks
-Endpoint = ${b_endpoint_address}:${port}
-PersistentKeepalive = $persistent_keepalive
-EOF
-
-echo -e "SIDE A\n-----\n"
-if [ $a_print_qr -gt 0 ]; then
-    qrencode -t ansiutf8 < $a_file
-elif [ $a_print_opn -gt 0 ]; then
-    echo -e "Paste the following values into your OPNsense Wireguard config\n"
-    echo -e "[Local]\n  Public Key:\t\t$a_pubkey\n  Private Key:\t\t$a_privkey\n  Listen Port:\t\t$port\n  DNS Server:\t\t$a_dns\n  Tunnel Address:\t$a_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$b_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $b_tunnel_address | cut -d '/' -f1)/32,$b_networks\n  Endpoint Address:\t$b_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
-else
-    cat $a_file
-    echo ""
+if [ -z "$a_tunnel_address" ] || [ -z "$b_tunnel_address" ]; then
+    echo "Tunnel addresses of both sides are required (-t and -T)." >&2
+    usage 1
 fi
 
-cat << EOF > $b_file
-[Interface]
-PrivateKey = $b_privkey
-Address = $b_tunnel_address
-DNS = $a_dns
-ListenPort = $port
-
-[Peer]
-PublicKey = $a_pubkey
-PresharedKey = $psk
-AllowedIPs = $(echo $a_tunnel_address | cut -d '/' -f1)/32,$a_networks
-Endpoint = ${a_endpoint_address}:${port}
-PersistentKeepalive = $persistent_keepalive
-EOF
-
-echo -e "SIDE B\n-----\n"
-if [ $b_print_qr -gt 0 ]; then
-    qrencode -t ansiutf8 < $b_file
-elif [ $b_print_opn -gt 0 ]; then
-    echo -e "Paste the following values into your OPNsense Wireguard config\n"
-    echo -e "[Local]\n  Public Key:\t\t$b_pubkey\n  Private Key:\t\t$b_privkey\n  Listen Port:\t\t$port\n  DNS Server:\t\t$b_dns\n  Tunnel Address:\t$b_tunnel_address\n\n[Endpoint]\n  Public Key:\t\t$a_pubkey\n  Shared Secret:\t$psk\n  Allowed IPs:\t\t$(echo $a_tunnel_address | cut -d '/' -f1)/32,$a_networks\n  Endpoint Address:\t$a_endpoint_address\n  Endpoint Port:\t$port\n  Keepalive Interval:\t$persistent_keepalive\n"
-else
-    cat $b_file
-    echo ""
+if [ $a_print_qr -gt 0 ] || [ $b_print_qr -gt 0 ]; then
+    if ! which qrencode > /dev/null; then
+        echo "Please install qrencode to print QR codes!"
+        exit 1
+    fi
 fi
+
+a_port=$port
+b_port=${b_port:-$port}
+
+a_file=${a_file:-./${a_name}.conf}
+b_file=${b_file:-./${b_name}.conf}
+
+# private key: from file (plain key or wg config with PrivateKey) or new
+read_privkey() {
+    if [ -z "$1" ]; then
+        wg genkey
+    elif grep -q '^ *PrivateKey' "$1"; then
+        sed -n 's/^ *PrivateKey *= *//p' "$1" | head -n1
+    else
+        head -n1 "$1"
+    fi
+}
+
+a_privkey=$(read_privkey "$a_keyfile") || exit 1
+b_privkey=$(read_privkey "$b_keyfile") || exit 1
+a_pubkey=$(echo "$a_privkey" | wg pubkey) || { echo "Invalid private key for side A" >&2; exit 1; }
+b_pubkey=$(echo "$b_privkey" | wg pubkey) || { echo "Invalid private key for side B" >&2; exit 1; }
+psk=$(wg genpsk)
+
+# AllowedIPs of a peer: its tunnel address as /32 plus its networks
+allowed_ips() {
+    local ips="${1%%/*}/32"
+    [ -n "$2" ] && ips="$ips,$2"
+    echo "$ips"
+}
+a_allowed=$(allowed_ips "$a_tunnel_address" "$a_networks")
+b_allowed=$(allowed_ips "$b_tunnel_address" "$b_networks")
+
+# write_conf FILE PRIVKEY ADDRESS DNS PEER_PUBKEY PEER_ALLOWED PEER_ENDPOINT OWN_PORT PEER_PORT
+write_conf() {
+    {
+        echo "[Interface]"
+        echo "PrivateKey = $2"
+        echo "Address = $3"
+        [ -n "$4" ] && echo "DNS = $4"
+        echo "ListenPort = $8"
+        echo ""
+        echo "[Peer]"
+        echo "PublicKey = $5"
+        echo "PresharedKey = $psk"
+        echo "AllowedIPs = $6"
+        if [ -n "$7" ]; then
+            echo "Endpoint = $7:$9"
+            echo "PersistentKeepalive = $persistent_keepalive"
+        fi
+    } > "$1"
+}
+
+# Field labels and order as in OPNsense: VPN > WireGuard > Instances / Peers
+# print_opnsense NAME PUBKEY PRIVKEY TUNNEL DNS PEER_NAME PEER_PUBKEY PEER_ALLOWED PEER_ENDPOINT OWN_PORT PEER_PORT
+print_opnsense() {
+    local own_port=${10} peer_port=${11}
+    echo "Enter the following values into OPNsense (empty = leave unchanged)"
+    echo ""
+    echo "VPN > WireGuard > Instances > +"
+    printf '  %-22s%s\n' \
+        "Enabled:" "yes" \
+        "Name:" "$1" \
+        "Public key:" "$2" \
+        "Private key:" "$3" \
+        "Listen port:" "$own_port" \
+        "MTU:" "" \
+        "DNS servers:" "$5" \
+        "Tunnel address:" "$4" \
+        "Depend on (CARP):" "" \
+        "Peers:" "$6 (select after creating the peer)" \
+        "Disable routes:" "no" \
+        "Gateway:" ""
+    echo ""
+    echo "VPN > WireGuard > Peers > +"
+    printf '  %-22s%s\n' \
+        "Enabled:" "yes" \
+        "Name:" "$6" \
+        "Public key:" "$7" \
+        "Pre-shared key:" "$psk" \
+        "Allowed IPs:" "${8//,/ }" \
+        "Endpoint address:" "$9" \
+        "Endpoint port:" "$( [ -n "$9" ] && echo "$peer_port")" \
+        "Instances:" "$1" \
+        "Keepalive interval:" "$( [ -n "$9" ] && echo "$persistent_keepalive")"
+    echo ""
+    echo "  Allowed IPs: enter each network as a separate entry."
+    [ -n "$5" ] && echo "  DNS servers: overrides the DNS settings of OPNsense - usually leave empty."
+    echo ""
+}
+
+# print_side TITLE FILE PRINT_QR PRINT_OPN ...print_opnsense arguments
+print_side() {
+    echo -e "$1\n-----\n"
+    if [ "$3" -gt 0 ]; then
+        qrencode -t ansiutf8 < "$2"
+    elif [ "$4" -gt 0 ]; then
+        shift 4
+        print_opnsense "$@"
+    else
+        cat "$2"
+        echo ""
+    fi
+}
+
+write_conf "$a_file" "$a_privkey" "$a_tunnel_address" "$b_dns" "$b_pubkey" "$b_allowed" "$b_endpoint_address" "$a_port" "$b_port"
+write_conf "$b_file" "$b_privkey" "$b_tunnel_address" "$a_dns" "$a_pubkey" "$a_allowed" "$a_endpoint_address" "$b_port" "$a_port"
+
+print_side "SIDE A ($a_name, saved to $a_file)" "$a_file" $a_print_qr $a_print_opn \
+    "$a_name" "$a_pubkey" "$a_privkey" "$a_tunnel_address" "$b_dns" \
+    "$b_name" "$b_pubkey" "$b_allowed" "$b_endpoint_address" "$a_port" "$b_port"
+print_side "SIDE B ($b_name, saved to $b_file)" "$b_file" $b_print_qr $b_print_opn \
+    "$b_name" "$b_pubkey" "$b_privkey" "$b_tunnel_address" "$a_dns" \
+    "$a_name" "$a_pubkey" "$a_allowed" "$a_endpoint_address" "$b_port" "$a_port"
