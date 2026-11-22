@@ -49,6 +49,24 @@ usage: wg-config [-h]
 Both tunnel addresses (`-t`, `-T`) are required. Generated files are created with mode 0600.
 `Endpoint` and `PersistentKeepalive` are only written if the other side has an endpoint address.
 
+## Which option ends up where
+
+Rule of thumb: **`AllowedIPs` always describes the other side.** In the config of side B it lists
+what side B reaches through the tunnel; in the config of side A it lists what side B may send.
+`wg-quick` adds a route into the tunnel for every entry in `AllowedIPs`.
+
+| Option      | written to config of | as           | meaning                                        |
+|-------------|----------------------|--------------|------------------------------------------------|
+| `-t`        | side A               | `Address`    | tunnel address of side A                       |
+| `-T`        | side B               | `Address`    | tunnel address of side B                       |
+| `-t` + `-n` | side B               | `AllowedIPs` | what side B reaches through the tunnel         |
+| `-T` + `-N` | side A               | `AllowedIPs` | what side A accepts from side B                |
+| `-e`        | side B               | `Endpoint`   | where side B connects to                       |
+| `-E`        | side A               | `Endpoint`   | omitted: side A gets no `Endpoint` line        |
+
+The own tunnel address is always added to the `AllowedIPs` of the other side, so a client
+without networks behind it (laptop, smartphone) needs no `-N`.
+
 ## Examples
 
 ### Server and admin laptop / smartphone
