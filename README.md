@@ -105,3 +105,18 @@ of side A. If the port of the FRITZ!Box is known beforehand, set it with `-P POR
     (C) 2023             wg-creator by bashclub (https://github.com/bashclub)
                  Author: Thorsten Spille <thorsten@spille-edv.de>
   ---------------------------------------------------------------------------
+
+## Nutzung, Gewährleistung und Haftung
+
+wg-config ist freie Software der bashclub-Community. Sie wird unentgeltlich und außerhalb einer Geschäftstätigkeit unter der MIT-Lizenz bereitgestellt: ohne Preis, ohne personenbezogene Daten als Gegenleistung und ohne Vertrag. Private Nutzung ist
+ausdrücklich geduldet und erfolgt auf eigene Gefahr. Die Software kommt ohne Gewährleistung, wie in der Lizenz
+beschrieben; ein Anspruch auf Support, Fehlerbehebung oder Updates besteht nicht.
+
+Die Haftung ist ausgeschlossen, soweit das gesetzlich zulässig ist. Zwingende gesetzliche Haftung bleibt unberührt.
+
+### Use, warranty and liability
+
+wg-config is free software of the bashclub community, supplied free of charge and outside the course of a commercial activity under the MIT licence: no price, no personal data in return, no contract. Private use is expressly tolerated and at your own
+risk. The software comes without warranty as set out in the licence; there is no claim to support, fixes or updates.
+Liability is excluded to the extent permitted by law; mandatory statutory liability remains unaffected.
+
